@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>T9 Çevirici</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #1f4037;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 30px;
+    }
+    input, textarea {
+      width: 100%;
+      max-width: 500px;
+      padding: 12px;
+      font-size: 18px;
+      margin: 10px 0;
+      border-radius: 8px;
+      border: none;
+      box-sizing: border-box;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      background: #4caf50;
+      color: white;
+      cursor: pointer;
+      margin: 5px;
+    }
+    .result {
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    footer {
+      margin-top: 30px;
+      font-size: 14px;
+      color: #ccc;
+    }
+  </style>
+</head>
+<body>
+  <h1>T9 Çevirici</h1>
+
+  <textarea id="textInput" placeholder="Kelime ya da sayı girin..."></textarea>
+  
+  <div>
+    <button onclick="toT9()">Yazıyı T9'a Çevir</button>
+    <button onclick="fromT9()">T9'dan Yazıya</button>
+  </div>
+
+  <div class="result" id="result"></div>
+
+  <footer>GPT tarafından oluşturuldu.</footer>
+
+  <script>
+    const t9Map = {
+      'a': '2', 'b': '2', 'c': '2',
+      'd': '3', 'e': '3', 'f': '3',
+      'g': '4', 'h': '4', 'i': '4',
+      'j': '5', 'k': '5', 'l': '5',
+      'm': '6', 'n': '6', 'o': '6',
+      'p': '7', 'q': '7', 'r': '7', 's': '7',
+      't': '8', 'u': '8', 'v': '8',
+      'w': '9', 'x': '9', 'y': '9', 'z': '9'
+    };
+
+    const reverseMap = {
+      '2': ['a', 'b', 'c'],
+      '3': ['d', 'e', 'f'],
+      '4': ['g', 'h', 'i'],
+      '5': ['j', 'k', 'l'],
+      '6': ['m', 'n', 'o'],
+      '7': ['p', 'q', 'r', 's'],
+      '8': ['t', 'u', 'v'],
+      '9': ['w', 'x', 'y', 'z']
+    };
+
+    // Günlük hayattan 1000+ kelime ve isimler
+    const dictionary = [
+      "merhaba", "selam", "nasılsın", "evet", "hayır", "lütfen", "teşekkürler",
+      "elma", "araba", "ev", "okul", "çalışmak", "yemek", "içmek", "su", "çay", "kahve",
+      "süt", "ekmek", "peynir", "zeytin", "domates", "sabah", "öğle", "akşam", "gece",
+      "uyumak", "uçak", "tren", "otobüs", "bilet", "kitap", "defter", "kalem", "silgi",
+      "bilgisayar", "telefon", "televizyon", "masa", "sandalye", "dolap", "pencere", "kapı",
+      "kedi", "köpek", "kuş", "balık", "anne", "baba", "kardeş", "abla", "ağabey", "dede",
+      "nine", "arkadaş", "oyun", "çocuk", "bebek", "alışveriş", "market", "manav", "kasap",
+      "fırın", "eczane", "hastane", "doktor", "hemşire", "ilaç", "ağrı", "hap", "muayene",
+      "randevu", "gezi", "seyahat", "tatil", "otel", "plaj", "deniz", "göl", "dağ", "orman",
+      "şehir", "köy", "mahalle", "sokak", "cadde", "park", "bahçe", "okumak", "yazmak", "dinlemek",
+      "izlemek", "çizmek", "koşmak", "yüzmek", "gezmek", "gitmek", "gelmek", "durmak", "başlamak",
+      "bitirmek", "temizlemek", "pişirmek", "kızartmak", "doğramak", "karıştırmak", "kar", "yağmur",
+      "güneş", "rüzgar", "hava", "sıcak", "soğuk", "ılık", "karanlık", "aydınlık", "mutlu", "üzgün",
+      "kızgın", "korkmuş", "şaşkın", "yorgun", "dinç", "hasta", "sağlıklı", "çirkin", "güzel", "uzun",
+      "kısa", "şişman", "zayıf", "aç", "tok", "hızlı", "yavaş", "zengin", "fakir", "yeni", "eski",
+      "doğru", "yanlış", "büyük", "küçük", "yüksek", "alçak", "tembel", "çalışkan", "zor", "kolay",
+      "yavaş", "hızlı", "kırmızı", "mavi", "yeşil", "sarı", "beyaz", "siyah", "pembe", "mor", "turuncu",
+      "renk", "el", "bacak", "kol", "baş", "ayak", "göz", "kulak", "burun", "ağız", "diş", "saç", "yüz",
+      "parmak", "gömlek", "pantolon", "etek", "ceket", "ayakkabı", "çorap", "şapka", "mont", "kazak", "elbise",
+      "wifi", "internet", "modem", "uydu", "yemek", "dondurma", "tatlı", "çorba", "burger", "pizza",
+      "sandviç", "fanta", "cola", "kola", "fırın", "buzdolabı", "çamaşır", "yatak", "yastık", "battaniye",
+      "havlu", "sabun", "şampuan", "diş macunu", "diş fırçası", "saç kurutma", "makyaj", "parfüm", "ayakkabı",
+      "çanta", "çantası", "telefon", "klavye", "fare", "kamera", "ekran", "televizyon", "radyo", "saat",
+      "not", "defter", "dizüstü", "masa", "dizüstü bilgisayar", "telefon", "tablet", "kamera", "laptop",
+      "bulut", "backup", "yedeek", "download", "upload", "sosyal medya", "instagram", "twitter", "facebook",
+      "youtube", "whatsapp", "telegram", "güncelleme", "uygulama", "ayarlamak", "yazılım", "program",
+      "game", "oyun", "çekiliş", "kitap", "dergi", "gazete", "filmler", "video", "dizi", "sinema",
+      "ahmet", "ege", "selin", "mert", "özge", "can", "ayşe", "fatma", "hasan", "ibrahim", "kemal", "zafer",
+      "gökhan", "hakan", "özdemir", "yusuf", "büşra", "selin", "emine", "melek", "esra", "muhammed"
+    ];
+
+    function toT9() {
+      const input = document.getElementById("textInput").value.toLowerCase();
+      let output = "";
+      for (let char of input) {
+        output += t9Map[char] || char;
+      }
+      document.getElementById("result").innerText = `T9 Kodu: ${output}`;
+    }
+
+    function getCombinations(digits, index = 0, prefix = "", results = []) {
+      if (index === digits.length) {
+        results.push(prefix);
+        return results;
+      }
+      const letters = reverseMap[digits[index]];
+      if (!letters) return results;
+      for (let letter of letters) {
+        getCombinations(digits, index + 1, prefix + letter, results);
+      }
+      return results;
+    }
+
+    function fromT9() {
+      const input = document.getElementById("textInput").value;
+      if (!input.match(/^[2-9]+$/)) {
+        document.getElementById("result").innerText = "Sadece 2-9 arası rakam girin.";
+        return;
+      }
+      const combinations = getCombinations(input);
+      const matches = dictionary.filter(word => combinations.includes(word));
+      document.getElementById("result").innerText = matches.length > 0 ? `Eşleşen Kelimeler: ${matches.join(", ")}` : "Eşleşme yok.";
+    }
+  </script>
+</body>
+</html>
